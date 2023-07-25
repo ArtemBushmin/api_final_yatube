@@ -1,9 +1,8 @@
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
-from django.core.exceptions import ValidationError
 
-
-from posts.models import Comment, Post, Group, Follow, User
+from posts.models import Comment, Follow, Group, Post, User
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -23,7 +22,7 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         fields = "__all__"
         model = Comment
-        read_only_fields = ('post', )
+        read_only_fields = ("post",)
 
 
 class GroupSerializer(serializers.ModelSerializer):
@@ -45,13 +44,14 @@ class FollowSerializer(serializers.ModelSerializer):
     class Meta:
         fields = "__all__"
         model = Follow
-        read_only_fields = ('user',)
-        validators = [serializers.UniqueTogetherValidator(
-            queryset=Follow.objects.all(),
-            fields=['user', 'following']
-        )]
+        read_only_fields = ("user",)
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=Follow.objects.all(), fields=["user", "following"]
+            )
+        ]
 
     def validate(self, attrs):
-        if self.context['request'].user == attrs['following']:
-            raise ValidationError['Подписка на самого себя запрещена']
+        if self.context["request"].user == attrs["following"]:
+            raise ValidationError("Подписка на самого себя запрещена")
         return attrs

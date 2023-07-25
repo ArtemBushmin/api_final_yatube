@@ -1,19 +1,15 @@
-from django.core.exceptions import PermissionDenied
-from rest_framework import permissions
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
-from rest_framework import filters
+from rest_framework import filters, permissions, viewsets
 from rest_framework.pagination import LimitOffsetPagination
-from .pagination import FollowPagination, PostPagination
 
-from posts.models import Post, Group, Follow
-from .serializers import (
-    PostSerializer,
-    CommentSerializer,
-    GroupSerializer,
-    FollowSerializer,
-)
+from posts.models import Follow, Group, Post
 from .permissions import OwnerOrReadOnly
+from .serializers import (
+    CommentSerializer,
+    FollowSerializer,
+    GroupSerializer,
+    PostSerializer,
+)
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -31,6 +27,11 @@ class PostViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly,
+        OwnerOrReadOnly,
+    )
+    pagination_class = None
 
     def perform_create(self, serializer):
         post_id = self.kwargs.get("post_id")
@@ -42,16 +43,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         post = get_object_or_404(Post, pk=post_id)
         new_queryset = post.comments
         return new_queryset
-
-    def perform_update(self, serializer):
-        if serializer.instance.author != self.request.user:
-            raise PermissionDenied("Изменение чужого контента запрещено!")
-        super(CommentViewSet, self).perform_update(serializer)
-
-    def perform_destroy(self, instance):
-        if instance.author != self.request.user:
-            raise PermissionDenied("Удаление чужого контента запрещено!")
-        return super(CommentViewSet, self).perform_destroy(instance)
 
 
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
@@ -65,11 +56,10 @@ class FollowViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ("following__username",)
-    pagination_class = FollowPagination
+    pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
         return Follow.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        # serializer.save(following=self.request.user)
         serializer.save(user=self.request.user)
