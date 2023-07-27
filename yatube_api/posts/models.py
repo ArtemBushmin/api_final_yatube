@@ -52,7 +52,6 @@ class Follow(models.Model):
         User,
         on_delete=models.CASCADE,
         blank=True,
-        null=True,
         related_name="following",
     )
 
